@@ -20,6 +20,14 @@ users.seek(0)  # переходим в начало файла, чтобы пр�
 for line in users:
     user_list.append(line.strip())
 
+#Список отправленных файлов
+sent_files_list = []
+sent_files = open("sent_files.txt", "a+", encoding="utf-8")
+sent_files.seek(0)
+
+for line in sent_files:
+    sent_files_list.append(line.strip())
+
 #Открываю папку с учебными материалами
 materials_folder = "materials"
 if not os.path.exists(materials_folder):
@@ -35,72 +43,70 @@ def get_text_messages(message):
 
     #Условие, есть ли такой юзер в списке пользователей
     if user_id_str in user_list:
-         # Если пользователь уже есть — НЕ отправляем материалы повторно
-     if user_id_str in user_list:
         bot.send_message(message.from_user.id, "Вы уже есть в списке пользователей.")
         return
 
-    # Если пользователя нет — добавляем его + отправляем материалы
+   # Добавляем нового пользователя
     users.write(user_id_str + "\n")
+    users.flush()
     user_list.append(user_id_str)
 
     bot.send_message(
         message.from_user.id,
         "Спасибо, добавил вас в список пользователей.\n"
-        "Секунду, отправляю учебный материал…"
+        "Отправляю доступные материалы…"
     )
 
-    send_all_materials_to_user(message.from_user.id)
+    # Отправляем новому пользователю все материалы, которые еще не отправлялись никому
+    files = os.listdir(materials_folder)
+    for file_name in files:
+        if file_name not in sent_files_list:
+            file_path = os.path.join(materials_folder, file_name)
+            send_file_to_user(message.from_user.id, file_path)
 
-#Функция отправки всех материалов пользователю (только один раз)
-def send_all_materials_to_user(user_id):
 
-    sent_files = set()   # чтобы не отправлять один файл дважды
+# === Универсальная отправка файла пользователю ===
+def send_file_to_user(user_id, file_path):
+    ext = file_path.lower().split(".")[-1]
 
-    #Бесконечный цикл проверки новых учебных материалов
+    if ext in ["jpg", "jpeg", "png", "gif", "webp"]:
+        f = open(file_path, "rb")
+        bot.send_photo(user_id, f)
+        f.close()
+
+    elif ext in ["mp4", "mov", "avi", "mkv"]:
+        f = open(file_path, "rb")
+        bot.send_video(user_id, f)
+        f.close()
+
+    else:
+        f = open(file_path, "rb")
+        bot.send_document(user_id, f)
+        f.close()
+
+# === Функция: проверить папку и отправить НОВЫЕ материалы ВСЕМ пользователям ===
+def scan_for_new_materials():
     while True:
-
-        #Получаем список файлов в папке (в массив)
         files = os.listdir(materials_folder)
-
-        #Перебираем массив по одному
         for file_name in files:
 
-            file_path = os.path.join(materials_folder, file_name)
+            # Новый ли это материал?
+            if file_name not in sent_files_list:
 
-            # Если файл уже отправляли — пропускаем
-            if file_name in sent_files:
-                continue
+                file_path = os.path.join(materials_folder, file_name)
 
-            #Определяем расширение файла
-            ext = file_name.lower().split(".")[-1]
+                # Отправляем всем пользователям
+                for user in user_list:
+                    send_file_to_user(user, file_path)
 
-            for user in user_list:
+                # Записываем, что файл отправлен
+                sent_files.write(file_name + "\n")
+                sent_files.flush()   # чтобы сохранить сразу
+                sent_files_list.append(file_name)
 
-                # === Картинки ===
-                if ext in ["jpg", "jpeg", "png", "gif", "webp"]:
-                    f = open(file_path, "rb")
-                    bot.send_photo(user, f)
-                    f.close()
-
-                # === Видео ===
-                elif ext in ["mp4", "mov", "avi", "mkv"]:
-                    f = open(file_path, "rb")
-                    bot.send_video(user, f)
-                    f.close()
-
-                # === Документы ===
-                else:
-                    # PDF, DOC, DOCX, XLSX, PPTX, TXT и любые другие
-                    f = open(file_path, "rb")
-                    bot.send_document(user, f)
-                    f.close()
-
-            # Помечаем файл как отправленный
-            sent_files.add(file_name)
-
-        #Делаем паузу в 10 секунд
         time.sleep(10)
+
+
     # Запускаем функцию ожидания появления картинок в отдельном потоке
     threading.Thread(target=wait_for_images, daemon=True).start()
 

@@ -29,7 +29,7 @@ for line in sent_files:
     sent_files_list.append(line.strip())
 
 #Открываю папку с учебными материалами
-materials_folder = "materials"
+materials_folder = "../materials"
 if not os.path.exists(materials_folder):
     os.mkdir(materials_folder)  # создаём папку, если её нет
 

@@ -107,8 +107,8 @@ def scan_for_new_materials():
         time.sleep(10)
 
 
-    # Запускаем функцию ожидания появления картинок в отдельном потоке
-    threading.Thread(target=wait_for_images, daemon=True).start()
+# Запускаем функцию ожидания появления картинок в отдельном потоке
+threading.Thread(target=scan_for_new_materials, daemon=True).start()
 
 #Начинаю бесконечно слушать новые сообщения
 bot.polling(none_stop=True, interval=0)

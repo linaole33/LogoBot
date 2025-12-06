@@ -37,7 +37,7 @@ if not os.path.exists(materials_folder):
 #Событие на получение сообщения
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
-    member = bot.get_chat_member(-1002132817329, message.from_user.id)
+    member = bot.get_chat_member(-1001472678365, message.from_user.id)
     if member.status in ['member', 'administrator', 'creator']:
         #Создаю временную переменную для сравнения (чтобы строка сравнивалась со строкой)
         user_id_str = str(message.from_user.id)
@@ -103,7 +103,7 @@ def scan_for_new_materials():
 
                 # Отправляем подписанным пользователям
                 for user in user_list:
-                    member = bot.get_chat_member(-1002132817329, user)
+                    member = bot.get_chat_member(-1001472678365, user)
                     if member.status in ['member', 'administrator', 'creator']:
                         send_file_to_user(user, file_path)
                 #TODO:Сделать удаление пользователя из списка

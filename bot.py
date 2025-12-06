@@ -37,32 +37,38 @@ if not os.path.exists(materials_folder):
 #Событие на получение сообщения
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
+    member = bot.get_chat_member(-1002132817329, message.from_user.id)
+    if member.status in ['member', 'administrator', 'creator']:
+        #Создаю временную переменную для сравнения (чтобы строка сравнивалась со строкой)
+        user_id_str = str(message.from_user.id)
 
-    #Создаю временную переменную для сравнения (чтобы строка сравнивалась со строкой)
-    user_id_str = str(message.from_user.id)
+        #Условие, есть ли такой юзер в списке пользователей
+        if user_id_str in user_list:
+            bot.send_message(message.from_user.id, "Вы уже есть в списке пользователей.")
+        else:
+            # Добавляем нового пользователя
+            users.write(user_id_str + "\n")
+            users.flush()
+            user_list.append(user_id_str)
 
-    #Условие, есть ли такой юзер в списке пользователей
-    if user_id_str in user_list:
-        bot.send_message(message.from_user.id, "Вы уже есть в списке пользователей.")
-        return
+            bot.send_message(
+                message.from_user.id,
+                "Спасибо, добавил вас в список пользователей.\n"
+                "Отправляю доступные материалы…"
+            )
 
-   # Добавляем нового пользователя
-    users.write(user_id_str + "\n")
-    users.flush()
-    user_list.append(user_id_str)
+            # Отправляем новому пользователю все материалы, которые еще не отправлялись никому
+            files = os.listdir(materials_folder)
+            for file_name in files:
+                if file_name not in sent_files_list:
+                    file_path = os.path.join(materials_folder, file_name)
+                    send_file_to_user(message.from_user.id, file_path)
+    else:
+        bot.send_message(
+            message.from_user.id,
+            "Чтобы получить материалы, подпишитесь на канал https://t.me/kseniasadko"
+        )
 
-    bot.send_message(
-        message.from_user.id,
-        "Спасибо, добавил вас в список пользователей.\n"
-        "Отправляю доступные материалы…"
-    )
-
-    # Отправляем новому пользователю все материалы, которые еще не отправлялись никому
-    files = os.listdir(materials_folder)
-    for file_name in files:
-        if file_name not in sent_files_list:
-            file_path = os.path.join(materials_folder, file_name)
-            send_file_to_user(message.from_user.id, file_path)
 
 
 # === Универсальная отправка файла пользователю ===

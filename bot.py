@@ -101,9 +101,12 @@ def scan_for_new_materials():
 
                 file_path = os.path.join(materials_folder, file_name)
 
-                # Отправляем всем пользователям
+                # Отправляем подписанным пользователям
                 for user in user_list:
-                    send_file_to_user(user, file_path)
+                    member = bot.get_chat_member(-1002132817329, user)
+                    if member.status in ['member', 'administrator', 'creator']:
+                        send_file_to_user(user, file_path)
+                #TODO:Сделать удаление пользователя из списка
 
                 # Записываем, что файл отправлен
                 sent_files.write(file_name + "\n")

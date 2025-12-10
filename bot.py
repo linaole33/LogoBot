@@ -20,18 +20,16 @@ users.seek(0)  # переходим в начало файла, чтобы пр�
 for line in users:
     user_list.append(line.strip())
 
-#Список отправленных файлов
-sent_files_list = []
-sent_files = open("sent_files.txt", "a+", encoding="utf-8")
-sent_files.seek(0)
-
-for line in sent_files:
-    sent_files_list.append(line.strip())
 
 #Открываю папку с учебными материалами
 materials_folder = "../materials"
 if not os.path.exists(materials_folder):
     os.mkdir(materials_folder)  # создаём папку, если её нет
+
+#Открываю папку с последними материалами
+last_sent_folder = "../last_sent"
+if not os.path.exists(last_sent_folder):
+    os.mkdir(last_sent_folder)  # создаём папку, если её нет
 
 #Оставляем файл открытым на запись (указатель уже в конце)
 #Событие на получение сообщения
@@ -54,15 +52,14 @@ def get_text_messages(message):
             bot.send_message(
                 message.from_user.id,
                 "Спасибо, добавил вас в список пользователей.\n"
-                "Отправляю доступные материалы…"
+                "Отправляю последний загруженный материал…"
             )
 
             # Отправляем новому пользователю все материалы, которые еще не отправлялись никому
-            files = os.listdir(materials_folder)
+            files = os.listdir(last_sent_folder)
             for file_name in files:
-                if file_name not in sent_files_list:
-                    file_path = os.path.join(materials_folder, file_name)
-                    send_file_to_user(message.from_user.id, file_path)
+                file_path = os.path.join(last_sent_folder, file_name)
+                send_file_to_user(message.from_user.id, file_path)
     else:
         bot.send_message(
             message.from_user.id,
@@ -90,29 +87,30 @@ def send_file_to_user(user_id, file_path):
         bot.send_document(user_id, f)
         f.close()
 
+def clear_directory(path: str):
+
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        os.remove(item_path)
+
 # === Функция: проверить папку и отправить НОВЫЕ материалы ВСЕМ пользователям ===
 def scan_for_new_materials():
     while True:
         files = os.listdir(materials_folder)
         for file_name in files:
 
-            # Новый ли это материал?
-            if file_name not in sent_files_list:
+            file_path = os.path.join(materials_folder, file_name)
+            last_file_path = os.path.join(last_sent_folder, file_name)
 
-                file_path = os.path.join(materials_folder, file_name)
-
-                # Отправляем подписанным пользователям
-                for user in user_list:
-                    member = bot.get_chat_member(-1002132817329, user)
-                    if member.status in ['member', 'administrator', 'creator']:
-                        send_file_to_user(user, file_path)
-                #TODO:Сделать удаление пользователя из списка
-
-                # Записываем, что файл отправлен
-                sent_files.write(file_name + "\n")
-                sent_files.flush()   # чтобы сохранить сразу
-                sent_files_list.append(file_name)
-
+            # Отправляем подписанным пользователям
+            for user in user_list:
+                member = bot.get_chat_member(-1002132817329, user)
+                if member.status in ['member', 'administrator', 'creator']:
+                    send_file_to_user(user, file_path)
+            #TODO:Сделать удаление пользователя из списка
+            clear_directory(last_sent_folder)
+            shutil.copy(file_path, last_file_path)
+            os.remove(file_path)
         time.sleep(10)
 
 

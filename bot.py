@@ -15,14 +15,17 @@ import shutil
 
 bot = telebot.TeleBot('8020115600:AAEuWDPnVxRkT2H_1HA7G_Ar7rZ1g7K0WvE');
 
+def load_users():
 #Считываю в массив user_list список пользователей из файла
-user_list = []
-users = open("users.txt", "a+", encoding="utf-8")  # a+ — открыть на чтение/дозапись, создать если нет
-users.seek(0)  # переходим в начало файла, чтобы прочитать содержимое
+    user_list = []
+    users = open("users.txt", "a+", encoding="utf-8")  # a+ — открыть на чтение/дозапись, создать если нет
+    users.seek(0)  # переходим в начало файла, чтобы прочитать содержимое
 
-for line in users:
-    user_list.append(line.strip())
+    for line in users:
+        user_list.append(line.strip())
 
+    users.close()
+load_users()
 
 #Открываю папку с учебными материалами
 materials_folder = "../materials"
@@ -47,9 +50,11 @@ def get_text_messages(message):
         if user_id_str in user_list:
             bot.send_message(message.from_user.id, "Вы уже есть в списке пользователей.")
         else:
+            users = open("users.txt", "a+", encoding="utf-8")  # a+ — открыть на чтение/дозапись
             # Добавляем нового пользователя
             users.write(user_id_str + "\n")
             users.flush()
+            users.close()
             user_list.append(user_id_str)
 
             bot.send_message(
@@ -110,7 +115,22 @@ def scan_for_new_materials():
                 member = bot.get_chat_member(-1002132817329, user)
                 if member.status in ['member', 'administrator', 'creator']:
                     send_file_to_user(user, file_path)
-            #TODO:Сделать удаление пользователя из списка
+            #удаление пользователя из списка
+                else:    
+                    users = open("users.txt", "r", encoding="utf-8")  # r — открыть на чтение, создать если нет
+                    users.seek(0)  # переходим в начало файла, чтобы прочитать содержимое
+                    tmp = open("tmp.txt", "a+", encoding="utf-8")  # a+ — открыть на чтение/дозапись, временный файл
+                    for line in users:
+                        if line != user:
+                           
+                            # Добавляем нового пользователя
+                            tmp.write(line + "\n")
+                    tmp.flush()
+                    tmp.close()
+                    users.close()
+                    shutil.move("tmp.txt" , "users.txt")
+                    load_users()
+                    
             clear_directory(last_sent_folder)
             shutil.copy(file_path, last_file_path)
             os.remove(file_path)
@@ -122,6 +142,3 @@ threading.Thread(target=scan_for_new_materials, daemon=True).start()
 
 #Начинаю бесконечно слушать новые сообщения
 bot.polling(none_stop=True, interval=0)
-
-#Закрываю файл, который был открыт на запись
-users.close()
